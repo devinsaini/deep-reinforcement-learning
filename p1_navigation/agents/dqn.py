@@ -13,13 +13,16 @@ class DQNAgent(Agent):
     """Interacts with and learns from the environment."""
 
     def __init__(self, state_size, action_size, gamma, learning_rate, seed, device, tau):
-        """Initialize an Agent object.
-        
-        Params
-        ======
+        """Initializes the agent
+
+        Args:
             state_size (int): dimension of each state
             action_size (int): dimension of each action
+            gamma (float): discount factor
+            learning_rate (float): optimizer learning rate
             seed (int): random seed
+            device (Device): Pytorch target device
+            tau (float): interpolation parameter for target network update
         """
 
         super().__init__(state_size, action_size, gamma, learning_rate, seed, device)
@@ -34,8 +37,7 @@ class DQNAgent(Agent):
     def compute_action(self, state, eps=0.):
         """Returns actions for given state as per current policy.
         
-        Params
-        ======
+        Args:
             state (array_like): current state
             eps (float): epsilon, for epsilon-greedy action selection
         """
@@ -52,13 +54,12 @@ class DQNAgent(Agent):
             return random.choice(np.arange(self.action_size))
 
     def train(self, experiences):
-        """Update value parameters using given batch of experience tuples.
+        """Execute training update
 
-        Params
-        ======
+        Args:
             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
-            gamma (float): discount factor
         """
+
         states, actions, rewards, next_states, dones = experiences
 
         # Get max predicted Q values (for next states) from target model
@@ -83,8 +84,7 @@ class DQNAgent(Agent):
         """Soft update model parameters.
         θ_target = τ*θ_local + (1 - τ)*θ_target
 
-        Params
-        ======
+        Args:
             local_model (PyTorch model): weights will be copied from
             target_model (PyTorch model): weights will be copied to
             tau (float): interpolation parameter 
@@ -98,8 +98,8 @@ class QNetwork(nn.Module):
 
     def __init__(self, state_size, action_size, seed, fc1_units=64, fc2_units=64):
         """Initialize parameters and build model.
-        Params
-        ======
+        
+        Args:
             state_size (int): Dimension of each state
             action_size (int): Dimension of each action
             seed (int): Random seed

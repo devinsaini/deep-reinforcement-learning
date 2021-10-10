@@ -15,8 +15,7 @@ class DoubleDQNAgent(Agent):
     def __init__(self, state_size, action_size, gamma, learning_rate, seed, device, tau):
         """Initialize an Agent object.
         
-        Params
-        ======
+        Args:
             state_size (int): dimension of each state
             action_size (int): dimension of each action
             seed (int): random seed
@@ -26,24 +25,23 @@ class DoubleDQNAgent(Agent):
         self.tau = tau
 
         # Q-Network
-        self.qnetwork_1 = QNetwork(state_size, action_size, seed).to(device)
-        self.qnetwork_2 = QNetwork(state_size, action_size, seed).to(device)
+        self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
+        self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=learning_rate)
 
 
     def compute_action(self, state, eps=0.):
         """Returns actions for given state as per current policy.
         
-        Params
-        ======
+        Args:
             state (array_like): current state
             eps (float): epsilon, for epsilon-greedy action selection
         """
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
-        self.qnetwork_1.eval()
+        self.qnetwork_local.eval()
         with torch.no_grad():
-            action_values = self.qnetwork_1(state)
-        self.qnetwork_1.train()
+            action_values = self.qnetwork_local(state)
+        self.qnetwork_local.train()
 
         # Epsilon-greedy action selection
         if random.random() > eps:
@@ -54,18 +52,14 @@ class DoubleDQNAgent(Agent):
     def train(self, experiences):
         """Update value parameters using given batch of experience tuples.
 
-        Params
-        ======
+        Args:
             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
-            gamma (float): discount factor
         """
         states, actions, rewards, next_states, dones = experiences
 
-        # randomly shuffle between the two networks
-        action_net, value_net = random.sample([self.qnetwork_1, self.qnetwork_2], 2)
-
-        # Get max predicted Q values (for next states) from target model
-        Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
+        # Get max predicted Q values (for next states) from target model using local network actions
+        Q_local_actions = self.qnetwork_local(next_states).detach().max(1)[1].unsqueeze(1)
+        Q_targets_next = self.qnetwork_target(next_states).gather(1, Q_local_actions)
         # Compute Q targets for current states 
         Q_targets = rewards + (self.gamma * Q_targets_next * (1 - dones))
 
@@ -86,8 +80,7 @@ class DoubleDQNAgent(Agent):
         """Soft update model parameters.
         θ_target = τ*θ_local + (1 - τ)*θ_target
 
-        Params
-        ======
+        Args:
             local_model (PyTorch model): weights will be copied from
             target_model (PyTorch model): weights will be copied to
             tau (float): interpolation parameter 
@@ -101,8 +94,8 @@ class QNetwork(nn.Module):
 
     def __init__(self, state_size, action_size, seed, fc1_units=64, fc2_units=64):
         """Initialize parameters and build model.
-        Params
-        ======
+        
+        Args:
             state_size (int): Dimension of each state
             action_size (int): Dimension of each action
             seed (int): Random seed
